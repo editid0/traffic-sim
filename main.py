@@ -1,6 +1,7 @@
 import simpy
 from typing import List, Optional
 import random
+import matplotlib.pyplot as plt
 
 DO_PRINT = False
 
@@ -92,13 +93,22 @@ def run_simulation(num_cars=50, time_limit=30):
 
 
 def main():
-    num_runs = 1000
-    num_cars = 50
-    time_limit = 30
+    num_runs = 100
+    num_cars = 200
+    time_limit = 90
     results = []
     for _ in range(num_runs):
         finished = run_simulation(num_cars=num_cars, time_limit=time_limit)
         results.append(finished)
+
+    # Plot histogram of results
+    plt.hist(results, bins=20, color='skyblue', edgecolor='black')
+    plt.title(f'Number of Cars Finished per Run ({num_runs} runs)')
+    plt.xlabel('Cars Finished')
+    plt.ylabel('Frequency')
+    plt.grid(True)
+    plt.savefig('cars_finished_histogram.png')
+
     avg_finished = sum(results) / len(results)
     print(
         f"\nAverage number of cars that finished in {time_limit} seconds over {num_runs} runs: {avg_finished:.2f}"
