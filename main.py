@@ -1,6 +1,6 @@
 import simpy
 from typing import List, Optional
-import random
+import random, numpy.random as npr
 import matplotlib.pyplot as plt
 
 DO_PRINT = False
@@ -37,6 +37,32 @@ class SpeedBump(RoadObject):
             print(
                 f"Car {car.id} slowed to {car.speed} at {env.now}s due to speed bump."
             )
+
+
+class CongestionCharging(RoadObject):
+    def __init__(self, fumes: float):
+        self.fumes = fumes
+
+    def affect(self, car, env):
+        if self.fumes > 0.5:
+            if bool(
+                npr.choice([True, False], 1, p=[0.4, 0.6])[0]
+            ):  # 60% chance of aborting and not going through congestion zone
+                if DO_PRINT:
+                    print(f"Car is being charged for entering")
+            else:
+                car.speed = 0
+
+
+class TrafficCollisionDetection(RoadObject):
+    def __init__(self): ...
+
+    def affect(self, car, env):
+        # Simulate a collision detection system
+        if bool(npr.choice([True, False], 1, p=[0.05, 0.95])[0]):
+            if DO_PRINT:
+                print(f"Collision detected for Car {car.id} at {env.now}s!")
+            car.speed = 0  # Stop the car in case of collision
 
 
 class Car:
@@ -79,7 +105,23 @@ def car_process(env, car: Car, road: Road, finished_cars, time_limit):
 
 def run_simulation(num_cars=50, time_limit=30):
     env = simpy.Environment()
-    road = Road(length=100, objects=[SpeedCamera(15), SpeedBump(5)])
+    road = Road(
+        length=100,
+        objects=[
+            SpeedCamera(15),
+            SpeedBump(5),
+            CongestionCharging(
+                float(
+                    npr.choice(
+                        [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+                        1,
+                        p=[0.05, 0.1, 0.1, 0.15, 0.2, 0.15, 0.1, 0.1, 0.05],
+                    )[0]
+                )
+            ),
+            TrafficCollisionDetection(),
+        ],
+    )
     speeds = [
         random.choices([10, 15, 20, 25, 30], weights=[1, 3, 5, 3, 1])[0]
         for _ in range(num_cars)
@@ -93,25 +135,27 @@ def run_simulation(num_cars=50, time_limit=30):
 
 
 def main():
-    num_runs = 100
-    num_cars = 200
-    time_limit = 90
+    num_runs = 1000
+    num_cars = 100
+    time_limit = 60
     results = []
     for _ in range(num_runs):
         finished = run_simulation(num_cars=num_cars, time_limit=time_limit)
+        if finished <= 10:
+            continue
         results.append(finished)
 
     # Plot histogram of results
-    plt.hist(results, bins=20, color='skyblue', edgecolor='black')
-    plt.title(f'Number of Cars Finished per Run ({num_runs} runs)')
-    plt.xlabel('Cars Finished')
-    plt.ylabel('Frequency')
+    plt.hist(results, bins=20, color="skyblue", edgecolor="black")
+    plt.title(f"Number of Cars Finished per Run ({num_runs} runs)")
+    plt.xlabel("Cars Finished")
+    plt.ylabel("Frequency")
     plt.grid(True)
-    plt.savefig('cars_finished_histogram.png')
+    plt.savefig("cars_finished_histogram.png")
 
     avg_finished = sum(results) / len(results)
     print(
-        f"\nAverage number of cars that finished in {time_limit} seconds over {num_runs} runs: {avg_finished:.2f}"
+        f"\nAverage number of cars that finished in {time_limit} seconds over {num_runs} runs: {avg_finished:.2f} out of {num_cars} cars."
     )
 
 
